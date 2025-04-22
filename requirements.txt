@@ -1,0 +1,9 @@
+asgiref
+backports.zoneinfo
+Django
+djangorestframework
+djangorestframework-simplejwt
+PyJWT
+python-dotenv
+sqlparse
+typing-extensions
