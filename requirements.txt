@@ -1,5 +1,6 @@
 asgiref
 Django
+gunicorn
 djangorestframework
 djangorestframework-simplejwt
 PyJWT
