@@ -6,8 +6,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from django.utils import timezone
 from datetime import timedelta
-from .serializers import *
-from .models import *
+from .serializers import RegistrationSerializer, LoginSerializer, TrainerProfileSerializer, CounsellorProfileSerializer
+from .models import User
 from .utils.email import send_otp_email, send_new_otp_email, send_password_reset_otp_email
 from .utils.messages import *
 
@@ -21,14 +21,6 @@ def get_tokens_for_user(user):
     }
 
 
-class HomePageView(APIView):
-    def get(self, request):
-        # Return a simple welcome message
-        response_data = {
-            "message": "Welcome to the Home Page!"
-        }
-        return Response(response_data, status=status.HTTP_200_OK)
-
 class StudentRegistrationView(APIView):
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
@@ -38,11 +30,6 @@ class StudentRegistrationView(APIView):
             send_otp_email(user.email, user.otp)  # Send OTP email
             return Response({"message": USER_REGISTERED_SUCCESSFULLY}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def get(self, request):
-        users = User.objects.filter(role='student')  # Filter for students
-        serializer = RegistrationSerializer(users, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class VerifyOtpView(APIView):
@@ -94,11 +81,6 @@ class TrainerProfileView(APIView):
             serializer.save()
             return Response({"message": TRAINER_REGISTERED_SUCCESSFULLY}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def get(self, request):
-        trainers = TrainerProfile.objects.all()
-        serializer = TrainerProfileSerializer(trainers, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class CounsellorProfileView(APIView):
     permission_classes = [IsAdminUser]  # Only admins can access this view
@@ -108,11 +90,6 @@ class CounsellorProfileView(APIView):
             serializer.save()
             return Response({"message": COUNSELLOR_REGISTERED_SUCCESSFULLY}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def get(self, request):
-        counsellors = CounsellorProfile.objects.all()
-        serializer = CounsellorProfileSerializer(counsellors, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class LogoutView(APIView):
     def post(self, request):
@@ -174,67 +151,4 @@ class ChangePasswordView(APIView):
                 return Response({"error": "New password and confirmation do not match."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
 
-
-class StudentDashboardView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
-        
-        try:
-            student_profile = StudentProfile.objects.get(user=user)
-            enrollments = Enrollment.objects.filter(student=user)
-            courses = [enrollment.course.title for enrollment in enrollments]
-
-            response_data = {
-                "student_profile": StudentProfileSerializer(student_profile).data,
-                "enrolled_courses": courses,
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
-        
-        except StudentProfile.DoesNotExist:
-            return Response({"error": "Student profile not found."}, status=status.HTTP_404_NOT_FOUND)
-
-
-class TrainerDashboardView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
-        
-        try:
-            trainer_profile = TrainerProfile.objects.get(user=user)
-            batches = trainer_profile.batches.all()
-            students = [enrollment.student.email for batch in batches for enrollment in Enrollment.objects.filter(course=batch.course)]
-
-            response_data = {
-                "trainer_profile": TrainerProfileSerializer(trainer_profile).data,
-                "batches": BatchSerializer(batches, many=True).data,
-                "assigned_students": students,
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
-        
-        except TrainerProfile.DoesNotExist:
-            return Response({"error": "Trainer profile not found."}, status=status.HTTP_404_NOT_FOUND)
-
-
-
-class CounsellorDashboardView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
-        
-        try:
-            counsellor_profile = CounsellorProfile.objects.get(user=user)
-            students = User.objects.filter(role='student')  # Fetch all students or filter by counselling relationship
-
-            response_data = {
-                "counsellor_profile": CounsellorProfileSerializer(counsellor_profile).data,
-                "students": [student.email for student in students],
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
-        
-        except CounsellorProfile.DoesNotExist:
-            return Response({"error": "Counsellor profile not found."}, status=status.HTTP_404_NOT_FOUND)
-
+    
